@@ -10,11 +10,11 @@ import (
 )
 
 const (
-	T_SimpleString = '+'
-	T_Error	   = '-'
-	T_Integer	   = ':'
-	T_BulkString  = '$'
-	T_Array	   = '*'
+	T_SimpleString	= '+'
+	T_Error		= '-'
+	T_Integer	= ':'
+	T_BulkString	= '$'
+	T_Array		= '*'
 )
 
 type Data struct {
@@ -79,7 +79,7 @@ func ReadData(r io.Reader) (*Data, error) {
 	buf = make([]byte, 1)
 	_, err = io.ReadFull(r, buf)
 	if nil != err {
-		return nil, errors.New("err_first_byte " + err.Error())
+		return nil, err
 	}
 
 	ret := &Data{}
