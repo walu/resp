@@ -50,6 +50,51 @@ func (d *Data) IsNil() bool {
 	return d.isNil == true
 }
 
+/*
+valid type: string, []byte, error, int64, []interface{}
+string -> T_SimpleString
+[]byte -> T_BulkString
+error -> T_Error
+int* -> T_Integer
+[]interface{} -> array
+
+*/
+func NewData(val interface{}) (ret *Data, err error) {
+	ret = new(Data)
+	switch val.(type) {
+		case string:
+			ret.T = T_SimpleString
+			ret.str = []byte(val.(string))
+		case error:
+			ret.T = T_Error
+			ret.str = []byte(val.(error).Error())
+		case int64, int8, int16, int32:
+			ret.T = T_Integer
+			ret.num = val.(int64)
+		case []interface{}:
+			ret.T = T_Array
+			ret.array = make([]*Data, len(val.([]interface{})))
+			for index := range val.([]interface{}) {
+				ret.array[index], err = NewData(val.([]interface{}))
+				if nil!=err {
+					goto end
+				}
+			}
+		default:
+			return nil, errors.New("unsupported type")
+	}
+end:
+	if nil!=err {
+		ret = nil
+	}
+	return ret, err
+}
+
+func NewSimpleString() {}
+func NewError() {}
+func NewInteger() {}
+func NewArray() {}
+
 //format *Data to []byte
 func FormatData(d *Data) []byte {
 	ret := new(bytes.Buffer)
