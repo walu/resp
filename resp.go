@@ -1,7 +1,9 @@
+//package resp provides methods to parse and format resp(redis protocal) data
 package resp
 
 import (
 	"io"
+	"fmt"
 	"errors"
 	"bytes"
 	"strconv"
@@ -20,7 +22,7 @@ type Data struct {
 	str []byte
 	num int64
 	array []*Data
-
+	isNil bool
 }
 
 //string\bulkString
@@ -44,20 +46,40 @@ func (d *Data) Array() []*Data {
 	return d.array
 }
 
+func (d *Data) IsNil() bool {
+	return d.isNil == true
+}
+
+//format *Data to []byte
+func FormatData(d *Data) []byte {
+	ret := new(bytes.Buffer)
+	ret.WriteByte(d.T)
+	switch d.T {
+	case T_SimpleString, T_Error:
+		fmt.Fprintf(ret, "%s\r\n", d.str)
+	case T_Integer:
+		fmt.Fprintf(ret, "%d\r\n", d.num)
+	case T_BulkString:
+		fmt.Fprintf(ret, "%d\r\n%s\r\n", len(d.str), string(d.str))
+	case T_Array:
+		fmt.Fprintf(ret, "%d\r\n", len(d.array))
+		for index := range d.array {
+			ret.Write(FormatData(d.array[index]))
+		}
+	}
+	return ret.Bytes()
+}
+
+//read from io.Reader, and parse into *Data
 func ReadData(r io.Reader) (*Data, error) {
 
 	var buf []byte
-	var n int
 	var err error
 
 	buf = make([]byte, 1)
-	n, err = io.ReadFull(r, buf)
+	_, err = io.ReadFull(r, buf)
 	if nil != err {
 		return nil, errors.New("err_first_byte")
-	}
-
-	if n==1 {
-	//
 	}
 
 	ret := &Data{}
@@ -79,10 +101,13 @@ func ReadData(r io.Reader) (*Data, error) {
 			lenBulkString, err = readRespIntLine(r)
 
 			ret.T = T_BulkString
-			ret.str, err = readRespN(r, lenBulkString)
-
-			//read the followed \r\n
-			_, err = readRespN(r, 2)
+			if -1 == lenBulkString {
+				ret.isNil = true
+			} else {
+				ret.str, err = readRespN(r, lenBulkString)
+				//read the followed \r\n
+				_, err = readRespN(r, 2)
+			}
 
 		case '*':
 			var lenArray int64
@@ -90,7 +115,9 @@ func ReadData(r io.Reader) (*Data, error) {
 			lenArray, err = readRespIntLine(r)
 
 			ret.T = T_Array
-			if nil==err {
+			if -1 == lenArray {
+				ret.isNil = true
+			} else if nil==err {
 				ret.array = make([]*Data, lenArray)
 				for i=0; i<lenArray; i++ {
 					ret.array[i], err = ReadData(r)
