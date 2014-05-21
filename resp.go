@@ -79,7 +79,7 @@ func ReadData(r io.Reader) (*Data, error) {
 	buf = make([]byte, 1)
 	_, err = io.ReadFull(r, buf)
 	if nil != err {
-		return nil, errors.New("err_first_byte")
+		return nil, errors.New("err_first_byte " + err.Error())
 	}
 
 	ret := &Data{}
@@ -121,6 +121,21 @@ func ReadData(r io.Reader) (*Data, error) {
 				ret.array = make([]*Data, lenArray)
 				for i=0; i<lenArray; i++ {
 					ret.array[i], err = ReadData(r)
+				}
+			}
+		default:
+			//Inline Commands
+			tmp, err := readRespLine(r)
+			if nil==err {
+				tmpSlice := bytes.Fields(tmp)
+
+				ret.T = T_Array
+				ret.array = make([]*Data, len(tmpSlice))
+				for index := range tmpSlice {
+					t := &Data{}
+					t.str = tmpSlice[index]
+					t.T = T_SimpleString
+					ret.array[index] = t
 				}
 			}
 
