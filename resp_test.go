@@ -49,6 +49,14 @@ func TestValidData(t *testing.T) {
 	}
 }
 
+func BenchmarkDataFormat(b *testing.B) {
+	for i:=0; i<b.N; i++ {
+		for _, data := range validData {
+			data.Format()
+		}
+	}
+}
+
 func eqData(d1, d2 Data) bool {
 	eqType := d1.T == d2.T
 	eqString := 0==bytes.Compare(d1.String, d2.String)
