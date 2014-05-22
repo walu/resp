@@ -16,6 +16,8 @@ const (
 	T_Array	   = '*'
 )
 
+var CRLF = []byte{'\r', '\n'}
+
 //Command
 //
 //Command 格式：Inline Command 与 Array With BulkString
@@ -47,6 +49,24 @@ func (c Command) Integer(index int) (ret int64) {
 		ret, _ = strconv.ParseInt(c.Args[index], 10, 64)
 	}
 	return ret
+}
+
+//统一格式化为ArrayWithBulkString
+func (c Command) Format() []byte {
+	var ret *bytes.Buffer
+	ret = new(bytes.Buffer)
+
+	ret.WriteByte(T_Array)
+	ret.WriteString(strconv.Itoa(len(c.Args)))
+	ret.Write(CRLF)
+	for index := range c.Args {
+		ret.WriteByte(T_BulkString)
+		ret.WriteString(strconv.Itoa(len(c.Args[index])))
+		ret.Write(CRLF)
+		ret.WriteString(c.Args[index])
+		ret.Write(CRLF)
+	}
+	return ret.Bytes()
 }
 
 func NewCommand(args ...string) (*Command, error) {
@@ -104,6 +124,39 @@ type Data struct {
 	Integer int64
 	Array []*Data
 	IsNil bool
+}
+
+func (d Data) Format() []byte {
+	var ret *bytes.Buffer
+	ret = new(bytes.Buffer)
+
+	ret.WriteByte(d.T)
+	if d.IsNil {
+		ret.WriteString("-1")
+		ret.Write(CRLF)
+		return ret.Bytes()
+	}
+
+	switch d.T {
+		case T_SimpleString, T_Error:
+			ret.Write(d.String)
+			ret.Write(CRLF)
+		case T_BulkString:
+			ret.WriteString(strconv.Itoa(len(d.String)))
+			ret.Write(CRLF)
+			ret.Write(d.String)
+			ret.Write(CRLF)
+		case T_Integer:
+			ret.WriteString(strconv.FormatInt(d.Integer, 10))
+			ret.Write(CRLF)
+		case T_Array:
+			ret.WriteString(strconv.Itoa(len(d.Array)))
+			ret.Write(CRLF)
+			for index := range d.Array {
+				ret.Write(d.Array[index].Format())
+			}
+	}
+	return ret.Bytes()
 }
 
 func ReadData(r io.Reader) (*Data, error) {

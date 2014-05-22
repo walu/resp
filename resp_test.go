@@ -5,33 +5,66 @@ import (
 	"testing"
 )
 
-type testResult struct {
-	T byte
-	Value interface{}
-}
+var (
+	respSimpleString = Data{T:T_SimpleString, String:[]byte("OK")}
+	respSimpleStringText = "+OK\r\n"
 
-var validBody map[string]testResult
+	respError = Data{T:T_Error, String:[]byte("Error message")}
+	respErrorText = "-Error message\r\n"
+
+	respBulkString = Data{T:T_BulkString, String:[]byte("foobar")}
+	respBulkStringText = "$6\r\nfoobar\r\n"
+
+	respNilBulkString = Data{T:T_BulkString, IsNil:true}
+	respNilBulkStringText = "$-1\r\n"
+
+	respInteger = Data{T:T_Integer, Integer:1000}
+	respIntegerText = ":1000\r\n"
+
+	respArray = Data{T:T_Array, Array:[]*Data{&respSimpleString, &respInteger}}
+	respArrayText = "*2\r\n" + respSimpleStringText + respIntegerText
+)
+
+
 var validCommand map[string]string
+var validData map[string]Data
 
 func TestValidData(t *testing.T) {
-	for body, result := range validBody {
-		buf := bytes.NewReader([]byte(body))
-		ret, err := ReadData(buf)
-		if nil != err {
+	for text, data := range validData {
+		buf := bytes.NewReader([]byte(text))
+		//test read
+		d, err := ReadData(buf)
+		if nil!=err || d.T != data.T {
 			t.Error(err)
 		}
 
-		switch ret.T {
-			case T_SimpleString, T_BulkString:
-				if 0 != bytes.Compare(result.Value.([]byte), ret.String) {
-					t.Error("not eq")
-				}
-			case T_Integer:
-				if result.Value.(int64) != ret.Integer {
-					t.Error("not eq")
-				}
+		if false == eqData(*d, data) {
+			t.Error(text, *d, data)
+		}
+
+		//test format
+		if text != string(data.Format()) {
+			t.Error(text, data)
 		}
 	}
+}
+
+func eqData(d1, d2 Data) bool {
+	eqType := d1.T == d2.T
+	eqString := 0==bytes.Compare(d1.String, d2.String)
+	eqInteger := d1.Integer == d2.Integer
+	eqNil := d1.IsNil == d2.IsNil
+	eqArrayLen := len(d1.Array) == len(d2.Array)
+	eqArray := true
+	if len(d1.Array) > 0 && eqArrayLen {
+		for index := range d1.Array {
+			if false == eqData(*d1.Array[index], *d2.Array[index]) {
+				eqArray = false
+				break
+			}
+		}
+	}
+	return eqType && eqString && eqInteger && eqNil && eqArrayLen && eqArray
 }
 
 func TestValidCommand(t *testing.T) {
@@ -65,19 +98,36 @@ func BenchmarkValidCommand(b *testing.B) {
 	}
 }
 
-func init() {
-	validBody = map[string]testResult {
-		"+OK\r\n" : {T_SimpleString, []byte("OK")},
-		"-Errors\r\n" : {T_Error, []byte("Errors")},
-		":100\r\n" : {T_Integer, int64(100)},
-		"$7\r\nwalu.cc\r\n" : {T_BulkString, []byte("walu.cc")},
+func testCommandFormat(t *testing.T) {
+	cmd, _ := NewCommand("LLEN", "walu.cc")
+	if "*2\r\n$7\r\nwalu.cc\r\n" != string(cmd.Format()) {
+		t.Error("cmd format error")
 	}
 
+}
+
+func BenchmarkCommandFormat(b *testing.B) {
+	cmd, _ := NewCommand("LLEN", "walu.cc")
+	for i:=0; i< b.N; i++ {
+		cmd.Format()
+	}
+}
+
+func init() {
 	validCommand = map[string]string{
 		"PING" : "PING",
 		"PING\n" : "PING",
 		"PING\r" : "PING",
 		"  PING ": "PING",
 		"*2\r\n$4\r\nLLEN\r\n$6\r\nmysist\r\n" : "LLEN",
+	}
+
+	validData = map[string]Data {
+		respSimpleStringText : respSimpleString,
+		respErrorText : respError,
+		respBulkStringText : respBulkString,
+		respNilBulkStringText : respNilBulkString,
+		respIntegerText : respInteger,
+		respArrayText : respArray,
 	}
 }
