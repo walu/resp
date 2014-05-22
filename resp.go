@@ -5,6 +5,7 @@ import (
 	"errors"
 	"bytes"
 	"strconv"
+	"strings"
 )
 
 const (
@@ -64,9 +65,20 @@ func ReadCommand(r io.Reader) (*Command, error) {
 	}
 
 	if T_Array != buf[0] {
-		return nil, errors.New("Unexpected Command Type")
+		//Inline Command
+		var line []byte
+		line, err = readRespCommandLine(r)
+		if nil != err {
+			return nil, errors.New("Unexpected Command Type")
+		}
+
+		var buffer *bytes.Buffer
+		buffer = bytes.NewBuffer(buf)
+		buffer.Write(line)
+		return NewCommand(strings.Fields(buffer.String())...)
 	}
 
+	//Command: BulkString
 	var ret *Data
 	ret = new(Data)
 
@@ -192,6 +204,41 @@ func readRespLine(r io.Reader) ([]byte, error) {
 
 	return ret.Next(i-2), nil
 }
+
+//读取老的redis协议 InlineCommand
+func readRespCommandLine(r io.Reader) ([]byte, error) {
+
+	var n int
+	var err error
+	var buf []byte
+	var ret *bytes.Buffer
+
+	buf = make([]byte, 1)
+	ret = &bytes.Buffer{}
+
+	for {
+		n, err = io.ReadFull(r, buf)
+		if nil != err {
+			if io.EOF == err {
+				break
+			}
+			return nil, err
+		}
+
+		if n==0 {
+			continue
+		}
+
+		ret.WriteByte(buf[0])
+		if '\n' == buf[0] {
+			break
+		}
+	}
+
+	return bytes.TrimSpace(ret.Bytes()), nil
+}
+
+
 
 //读取N个字节，并去掉最后的\r\n
 func readRespN(r io.Reader, n int64) ([]byte, error) {
