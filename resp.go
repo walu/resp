@@ -123,19 +123,19 @@ func readDataForSpecType(r io.Reader, t byte) (*Data, error) {
 
 	ret = new(Data)
 	switch t {
-		case '+':
+		case T_SimpleString:
 			ret.T = T_SimpleString
 			ret.String, err = readRespLine(r)
 
-		case '-':
+		case T_Error:
 			ret.T = T_Error
 			ret.String, err = readRespLine(r)
 
-		case ':':
+		case T_Integer:
 			ret.T = T_Integer
 			ret.Integer, err = readRespIntLine(r)
 
-		case '$':
+		case T_BulkString:
 			var lenBulkString int64
 			lenBulkString, err = readRespIntLine(r)
 
@@ -147,7 +147,7 @@ func readDataForSpecType(r io.Reader, t byte) (*Data, error) {
 				ret.IsNil = true
 			}
 
-		case '*':
+		case T_Array:
 			var lenArray int64
 			var i int64
 			lenArray, err = readRespIntLine(r)
@@ -156,7 +156,7 @@ func readDataForSpecType(r io.Reader, t byte) (*Data, error) {
 			if nil==err {
 				if -1 != lenArray {
 					ret.Array = make([]*Data, lenArray)
-					for i=0; i<lenArray; i++ {
+					for i=0; i<lenArray && nil == err; i++ {
 						ret.Array[i], err = ReadData(r)
 					}
 				} else {
@@ -208,7 +208,6 @@ func readRespLine(r io.Reader) ([]byte, error) {
 //读取老的redis协议 InlineCommand
 func readRespCommandLine(r io.Reader) ([]byte, error) {
 
-	var n int
 	var err error
 	var buf []byte
 	var ret *bytes.Buffer
@@ -217,16 +216,12 @@ func readRespCommandLine(r io.Reader) ([]byte, error) {
 	ret = &bytes.Buffer{}
 
 	for {
-		n, err = io.ReadFull(r, buf)
+		_, err = io.ReadFull(r, buf)
 		if nil != err {
 			if io.EOF == err {
 				break
 			}
 			return nil, err
-		}
-
-		if n==0 {
-			continue
 		}
 
 		ret.WriteByte(buf[0])
