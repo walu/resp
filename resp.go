@@ -79,7 +79,8 @@ func NewCommand(args ...string) (*Command, error) {
 //从Reader中读取Command
 func ReadCommand(r io.Reader) (*Command, error) {
 	buf, err := readRespCommandLine(r)
-	if nil != err {
+	
+	if nil != err && !(io.EOF == err && len(buf) > 1 ) {
 		return nil, err
 	}
 
@@ -271,7 +272,7 @@ func readRespCommandLine(r io.Reader) ([]byte, error) {
 		}
 	}
 
-	return bytes.TrimSpace(ret.Bytes()), nil
+	return bytes.TrimSpace(ret.Bytes()), err
 }
 
 
