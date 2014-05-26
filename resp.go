@@ -230,7 +230,7 @@ func readDataForSpecType(r io.Reader, t byte) (*Data, error) {
 //读取当前行，并去掉最后的\r\n
 func readRespLine(r io.Reader) ([]byte, error) {
 
-	var n, i int
+	var i int
 	var err error
 	var buf []byte
 	var ret *bytes.Buffer
@@ -239,13 +239,9 @@ func readRespLine(r io.Reader) ([]byte, error) {
 	ret = &bytes.Buffer{}
 
 	for {
-		n, err = io.ReadFull(r, buf)
+		_, err = io.ReadFull(r, buf)
 		if nil != err {
 			return nil, err
-		}
-
-		if n==0 {
-			continue
 		}
 
 		i++
@@ -285,7 +281,6 @@ func readRespCommandLine(r io.Reader) ([]byte, error) {
 
 	return bytes.TrimSpace(ret.Bytes()), nil
 }
-
 
 
 //读取N个字节，并去掉最后的\r\n
