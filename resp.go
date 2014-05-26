@@ -79,13 +79,12 @@ func NewCommand(args ...string) (*Command, error) {
 //从Reader中读取Command
 func ReadCommand(r io.Reader) (*Command, error) {
 	buf, err := readRespCommandLine(r)
-	
 	if nil != err && !(io.EOF == err && len(buf) > 1 ) {
 		return nil, err
 	}
 
 	if T_Array != buf[0] {
-		return NewCommand(strings.Fields(string(buf))...)
+		return NewCommand(strings.Fields( strings.TrimSpace(string(buf)) )...)
 	}
 
 	//Command: BulkString
