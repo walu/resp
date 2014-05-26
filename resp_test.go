@@ -35,7 +35,7 @@ func TestValidData(t *testing.T) {
 		//test read
 		d, err := ReadData(buf)
 		if nil!=err || d.T != data.T {
-			t.Error(err)
+			t.Error(err, text, data.T)
 		}
 
 		if false == eqData(*d, data) {

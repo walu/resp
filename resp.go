@@ -78,31 +78,20 @@ func NewCommand(args ...string) (*Command, error) {
 
 //从Reader中读取Command
 func ReadCommand(r io.Reader) (*Command, error) {
-	buf := make([]byte, 1)
-	_, err := io.ReadFull(r, buf)
+	buf, err := readRespCommandLine(r)
 	if nil != err {
 		return nil, err
 	}
 
 	if T_Array != buf[0] {
-		//Inline Command
-		var line []byte
-		line, err = readRespCommandLine(r)
-		if nil != err {
-			return nil, errors.New("Unexpected Command Type")
-		}
-
-		var buffer *bytes.Buffer
-		buffer = bytes.NewBuffer(buf)
-		buffer.Write(line)
-		return NewCommand(strings.Fields(buffer.String())...)
+		return NewCommand(strings.Fields(string(buf))...)
 	}
 
 	//Command: BulkString
 	var ret *Data
 	ret = new(Data)
 
-	ret, err = readDataForSpecType(r, buf[0])
+	ret, err = readDataForSpecType(r, buf)
 	if nil != err {
 		return nil, err
 	}
@@ -160,37 +149,40 @@ func (d Data) Format() []byte {
 }
 
 func ReadData(r io.Reader) (*Data, error) {
-	buf := make([]byte, 1)
-	_, err := io.ReadFull(r, buf)
+	buf, err := readRespLine(r)
 	if nil != err {
 		return nil, err
 	}
 
-	return readDataForSpecType(r, buf[0])
+	if len(buf) < 2 {
+		return nil, errors.New("invalid Data Source: " + string(buf))
+	}
+
+	return readDataForSpecType(r, buf)
 }
 
-func readDataForSpecType(r io.Reader, t byte) (*Data, error) {
+func readDataForSpecType(r io.Reader, line []byte) (*Data, error) {
 
 	var err error
 	var ret *Data
 
 	ret = new(Data)
-	switch t {
+	switch line[0] {
 		case T_SimpleString:
 			ret.T = T_SimpleString
-			ret.String, err = readRespLine(r)
+			ret.String = line[1:]
 
 		case T_Error:
 			ret.T = T_Error
-			ret.String, err = readRespLine(r)
+			ret.String = line[1:]
 
 		case T_Integer:
 			ret.T = T_Integer
-			ret.Integer, err = readRespIntLine(r)
+			ret.Integer, err = strconv.ParseInt(string(line[1:]), 10, 64)
 
 		case T_BulkString:
 			var lenBulkString int64
-			lenBulkString, err = readRespIntLine(r)
+			lenBulkString, err = strconv.ParseInt(string(line[1:]), 10, 64)
 
 			ret.T = T_BulkString
 			if -1 != lenBulkString {
@@ -203,7 +195,7 @@ func readDataForSpecType(r io.Reader, t byte) (*Data, error) {
 		case T_Array:
 			var lenArray int64
 			var i int64
-			lenArray, err = readRespIntLine(r)
+			lenArray, err = strconv.ParseInt(string(line[1:]), 10, 64)
 
 			ret.T = T_Array
 			if nil==err {
@@ -218,7 +210,7 @@ func readDataForSpecType(r io.Reader, t byte) (*Data, error) {
 			}
 
 		default: //Maybe you are Inline Command
-			err = errors.New("Unexpected type")
+			err = errors.New("Unexpected type ")
 
 	}
 	return ret, err
