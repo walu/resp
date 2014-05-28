@@ -9,24 +9,25 @@ import (
 )
 
 const (
-	T_SimpleString = '+'
-	T_Error	   = '-'
-	T_Integer	   = ':'
-	T_BulkString  = '$'
-	T_Array	   = '*'
+	T_SimpleString	= '+'
+	T_Error		= '-'
+	T_Integer	= ':'
+	T_BulkString	= '$'
+	T_Array		= '*'
 )
 
 var CRLF = []byte{'\r', '\n'}
 
-//Command
-//
-//Command 格式：Inline Command 与 Array With BulkString
+/*
+Command
+
+redis supports two kinds of Command: (Inline Command) and (Array With BulkString)
+*/
 type Command struct {
-	//根据惯例，Args[0] 是Name本身
-	Args []string
+	Args []string //Args[0] is the command name
 }
 
-//返回Command的名称，如GET\SET
+//get the command name
 func (c Command) Name() string {
 	if len(c.Args)==0 {
 		return ""
@@ -35,7 +36,7 @@ func (c Command) Name() string {
 	}
 }
 
-//以String形式获取Command[index]
+//get command.Args[index] in string
 func (c Command) String(index int) (ret string) {
 	if len(c.Args) > index {
 		ret = c.Args[index]
@@ -43,7 +44,8 @@ func (c Command) String(index int) (ret string) {
 	return ret
 }
 
-//以int64的形式返回Command.Args[index]
+//get command.Args[index] in int64. 
+//return 0 if it isn't numberic string.
 func (c Command) Integer(index int) (ret int64) {
 	if len(c.Args) > index {
 		ret, _ = strconv.ParseInt(c.Args[index], 10, 64)
@@ -51,7 +53,7 @@ func (c Command) Integer(index int) (ret int64) {
 	return ret
 }
 
-//统一格式化为ArrayWithBulkString
+//Foramat a command into ArrayWithBulkString
 func (c Command) Format() []byte {
 	var ret *bytes.Buffer
 	ret = new(bytes.Buffer)
@@ -76,7 +78,7 @@ func NewCommand(args ...string) (*Command, error) {
 	return &Command{Args:args}, nil
 }
 
-//从Reader中读取Command
+//read a command from io.reader
 func ReadCommand(r io.Reader) (*Command, error) {
 	buf, err := readRespCommandLine(r)
 	if nil != err && !(io.EOF == err && len(buf) > 1 ) {
@@ -107,6 +109,7 @@ func ReadCommand(r io.Reader) (*Command, error) {
 	return NewCommand(commandArgs...)
 }
 
+//a resp package
 type Data struct {
 	T byte
 	String []byte
@@ -115,6 +118,7 @@ type Data struct {
 	IsNil bool
 }
 
+//format Data into resp string
 func (d Data) Format() []byte {
 	var ret *bytes.Buffer
 	ret = new(bytes.Buffer)
@@ -148,6 +152,7 @@ func (d Data) Format() []byte {
 	return ret.Bytes()
 }
 
+//get a data from io.Reader
 func ReadData(r io.Reader) (*Data, error) {
 	buf, err := readRespLine(r)
 	if nil != err {
@@ -219,7 +224,7 @@ func readDataForSpecType(r io.Reader, line []byte) (*Data, error) {
 
 
 
-//读取当前行，并去掉最后的\r\n
+//read a resp line and trim the last \r\n
 func readRespLine(r io.Reader) ([]byte, error) {
 
 	var i int
@@ -246,7 +251,7 @@ func readRespLine(r io.Reader) ([]byte, error) {
 	return ret.Next(i-2), nil
 }
 
-//读取老的redis协议 InlineCommand
+//read a redis InlineCommand
 func readRespCommandLine(r io.Reader) ([]byte, error) {
 
 	var err error
@@ -275,7 +280,7 @@ func readRespCommandLine(r io.Reader) ([]byte, error) {
 }
 
 
-//读取N个字节，并去掉最后的\r\n
+//read the next N bytes
 func readRespN(r io.Reader, n int64) ([]byte, error) {
 	var err error
 	var ret []byte
@@ -288,7 +293,7 @@ func readRespN(r io.Reader, n int64) ([]byte, error) {
 	return ret, err
 }
 
-//读取当前行的数字，并去掉最后的\r\n
+//read a respline, and return the values parsed into int
 func readRespIntLine(r io.Reader) (int64, error) {
 	line, err := readRespLine(r)
 	if nil!=err {
