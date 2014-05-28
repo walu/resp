@@ -8,7 +8,7 @@ redis的command分为两种，inline command与bulkString。
 
 在io.Reader中读取一个命令：
 
-```
+```go
 //ex: parse command
 body := []byte("setex name 10 walu\r\n") //其实inline command对最后的\r\n没有要求
 r := bytes.NewReader(body)
@@ -34,7 +34,8 @@ redis的通讯协议resp支持五种数据类型：SimpleString、Error、BulkSt
 
 
 resp使用了Data结构体来表示这五种数据
-```
+
+```go
 type Data struct {
 	T byte 		//表示类型
 	String []byte	//SimpleString、Error、BulkString 使用这个属性取值
