@@ -17,9 +17,9 @@ cmd, err := ReadCommand(r)
 
 //so:
 //cmd.Name() == "setex"
-//cmd.String(1) == "name"
+//cmd.Value(1) == "name"
 //cmd.Integer(2) == 10 (int64)
-//cmd.String(3)  == "walu"
+//cmd.Value(3)  == "walu"
 
 //----------------------------
 //encode command

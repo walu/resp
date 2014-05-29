@@ -37,7 +37,9 @@ func (c Command) Name() string {
 }
 
 //get command.Args[index] in string
-func (c Command) String(index int) (ret string) {
+//
+//I must change the method name from String to Value, because method named String has specical meaning when working with fmt.Sprintf.
+func (c Command) Value(index int) (ret string) {
 	if len(c.Args) > index {
 		ret = c.Args[index]
 	}
