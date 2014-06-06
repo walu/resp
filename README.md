@@ -1,6 +1,9 @@
+
+> [Document In English](<README_en.md>)
+
 # RESP
 
-redis协议解析类库，并支持redis inline command。
+resp是一个高性能、易用的redis协议解析类库，支持redis协议数据与redis inline command。
 
 ## Parse/Encode Redis command
 
