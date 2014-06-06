@@ -4,6 +4,8 @@
 
 a simple and high-performance library for parsing and encoding redis protocal and redis inline command
 
+* Repo: https://github.com/walu/resp
+
 ## Parse/Encode Redis command
 
 there are two form of redis command, inline command and redis bulk string.

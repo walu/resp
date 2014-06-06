@@ -1,3 +1,4 @@
+//a simple and high-performance library for parsing and encoding redis protocal and redis inline command
 package resp
 
 import (
