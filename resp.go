@@ -74,6 +74,11 @@ func (c Command) Format() []byte {
 	return ret.Bytes()
 }
 
+/*
+make a new command like terminal
+
+	cmd, err := NewCommand("get", "username")
+*/
 func NewCommand(args ...string) (*Command, error) {
 	if len(args) == 0 {
 		return nil, errors.New("err_new_cmd")
